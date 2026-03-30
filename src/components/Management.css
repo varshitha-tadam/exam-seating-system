@@ -1,0 +1,53 @@
+.manage-container {
+    padding: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.manage-form {
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.manage-form input, .manage-form select {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    color: #111827;
+}
+
+.manage-form button {
+    background: #4f46e5;
+    color: white;
+    font-weight: 600;
+}
+
+.manage-card {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    transition: background 0.2s;
+}
+
+.manage-card:hover {
+    background: #f9fafb;
+}
+
+.manage-card strong { color: #111827; font-size: 1.1rem; }
+.manage-card p { color: #6b7280; font-size: 0.95rem; }
+
+.del-btn {
+    background: rgba(239, 68, 68, 0.1);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.del-btn:hover {
+    background: #ef4444;
+    color: white;
+}
