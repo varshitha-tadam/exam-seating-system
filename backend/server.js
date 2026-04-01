@@ -7,14 +7,33 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const db = require("./db");
 
 const app = express();
+
+// ─────────────────────────────────────────────
+// CORS FIX — UPDATED
+// ─────────────────────────────────────────────
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
-  credentials: true
+  origin: function (origin, callback) {
+    const allowed = [
+      'https://exam-seating-system-one.vercel.app',
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://localhost:5001'
+    ];
+    if (!origin || allowed.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Allow all origins for now
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.use(express.json());
 
 const SECRET = process.env.JWT_SECRET || "examSeat_super_secret_key_2024";
-const PORT = 5001;
+const PORT = process.env.PORT || 5001;
 
 // ─────────────────────────────────────────────
 // MIDDLEWARE: Verify JWT token
@@ -179,13 +198,11 @@ app.get("/my-seat", verifyToken, (req, res) => {
 app.post("/allocate", verifyToken, requireAdminOrFaculty, (req, res) => {
   const { examId, hallId, exam_name, exam_date, algorithm, hallName } = req.body;
 
-  // 1. Get Hall details
   db.query("SELECT * FROM halls WHERE id = ?", [hallId], (err, halls) => {
     if (err || halls.length === 0) return res.status(404).json({ message: "Hall not found" });
     const hall = halls[0];
     const { rows, cols, capacity } = hall;
 
-    // 2. Get Students (excluding already allocated for this exam)
     db.query(
       "SELECT id, email, department, roll_number, first_name, last_name FROM users WHERE role = 'student' AND email NOT IN (SELECT student_email FROM seating WHERE exam_id = ?)",
       [examId],
@@ -193,9 +210,8 @@ app.post("/allocate", verifyToken, requireAdminOrFaculty, (req, res) => {
         if (err) return res.status(500).json({ message: "DB error", error: err });
         if (students.length === 0) return res.status(400).json({ message: "No students left to allocate" });
 
-        // 3. Apply Sorting Strategy
         console.log(`🚀 ALLOCATING: Algorithm=${algorithm} | Students Count=${students.length}`);
-        
+
         let processedStudents = [...students];
         if (algorithm === 'roll_number') {
           processedStudents.sort((a, b) => (a.roll_number || "").localeCompare(b.roll_number || "", undefined, { numeric: true }));
@@ -204,11 +220,8 @@ app.post("/allocate", verifyToken, requireAdminOrFaculty, (req, res) => {
         } else if (algorithm === 'random') {
           processedStudents.sort(() => Math.random() - 0.5);
         } else {
-          // Default: Sort by ID for consistent 'Sequential'
           processedStudents.sort((a, b) => a.id - b.id);
         }
-
-        console.log("📝 Sorted Roll Numbers:", processedStudents.map(s => s.roll_number).slice(0, 5));
 
         const allocation = [];
         let r = 1, c = 1;
@@ -217,7 +230,7 @@ app.post("/allocate", verifyToken, requireAdminOrFaculty, (req, res) => {
         for (let i = 0; i < Math.min(processedStudents.length, capacity); i++) {
           const student = processedStudents[i];
           const seatNo = `${String.fromCharCode(64 + r)}${c}`;
-          
+
           allocation.push([
             student.email,
             hall.id,
@@ -229,8 +242,7 @@ app.post("/allocate", verifyToken, requireAdminOrFaculty, (req, res) => {
           ]);
 
           count++;
-          
-          // Standard Left-to-Right filling
+
           if (c < cols) {
             c++;
           } else {
@@ -240,10 +252,9 @@ app.post("/allocate", verifyToken, requireAdminOrFaculty, (req, res) => {
           if (r > rows) break;
         }
 
-        // 4. Bulk Insert
         db.query("DELETE FROM seating WHERE exam_id = ? AND hall_id = ?", [examId, hallId], (delErr) => {
           if (delErr) return res.status(500).json({ message: "DB error", error: delErr });
-          
+
           db.query(
             "INSERT INTO seating (student_email, hall_id, hall, seat_number, exam_id, exam_name, exam_date) VALUES ?",
             [allocation],
@@ -258,7 +269,7 @@ app.post("/allocate", verifyToken, requireAdminOrFaculty, (req, res) => {
   });
 });
 
-// GET /allocate/:examId — Get seating for an exam (Enriched with student details)
+// GET /allocate/:examId — Get seating for an exam
 app.get("/allocate/:examId", verifyToken, (req, res) => {
   const query = `
     SELECT s.*, u.first_name, u.last_name, u.department, u.roll_number 
@@ -364,9 +375,8 @@ app.delete("/exams/:id", verifyToken, requireAdminOrFaculty, (req, res) => {
 // ATTENDANCE & INVIGILATION
 // ─────────────────────────────────────────────
 
-// Mark Attendance
 app.patch("/seating/:id/attendance", verifyToken, requireAdminOrFaculty, (req, res) => {
-  const { status } = req.body; // 'present', 'absent', 'pending'
+  const { status } = req.body;
   db.query(
     "UPDATE seating SET attendance = ? WHERE id = ?",
     [status, req.params.id],
@@ -377,7 +387,6 @@ app.patch("/seating/:id/attendance", verifyToken, requireAdminOrFaculty, (req, r
   );
 });
 
-// Get all faculty for assignment
 app.get("/faculty", verifyToken, requireAdminOrFaculty, (req, res) => {
   db.query("SELECT id, first_name, last_name, email, department FROM users WHERE role = 'faculty' ORDER BY first_name ASC", (err, results) => {
     if (err) return res.status(500).json({ message: "DB error", error: err });
@@ -385,7 +394,6 @@ app.get("/faculty", verifyToken, requireAdminOrFaculty, (req, res) => {
   });
 });
 
-// Seed default faculty (safe - uses INSERT IGNORE)
 app.get("/seed-faculty", async (req, res) => {
   try {
     const hash = await bcrypt.hash("Faculty@2024!", 10);
@@ -413,7 +421,6 @@ app.get("/seed-faculty", async (req, res) => {
   }
 });
 
-// Assign Invigilator
 app.post("/invigilation", verifyToken, requireAdminOrFaculty, (req, res) => {
   const { faculty_id, exam_id, hall_id } = req.body;
   db.query(
@@ -426,7 +433,6 @@ app.post("/invigilation", verifyToken, requireAdminOrFaculty, (req, res) => {
   );
 });
 
-// Get assignments
 app.get("/invigilation", verifyToken, (req, res) => {
   db.query(
     `SELECT i.*, f.first_name, f.last_name, f.email as faculty_email, f.department as faculty_dept,
@@ -444,7 +450,6 @@ app.get("/invigilation", verifyToken, (req, res) => {
   );
 });
 
-// Delete/unassign an invigilator
 app.delete("/invigilation/:id", verifyToken, requireAdmin, (req, res) => {
   db.query("DELETE FROM invigilators WHERE id = ?", [req.params.id], (err, result) => {
     if (err) return res.status(500).json({ message: "DB error", error: err });
@@ -453,7 +458,6 @@ app.delete("/invigilation/:id", verifyToken, requireAdmin, (req, res) => {
   });
 });
 
-// Mock Notifications
 app.post("/notifications/send", verifyToken, requireAdmin, (req, res) => {
   const { title, message, targetRole } = req.body;
   console.log(`📢 [NOTIFICATION] To: ${targetRole} | Title: ${title} | Message: ${message}`);
@@ -470,17 +474,14 @@ app.post("/allocate-manual", verifyToken, requireAdminOrFaculty, (req, res) => {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
-  // 1. Check if seat is already taken for this exam/hall
   db.query("SELECT * FROM seating WHERE exam_id = ? AND hall_id = ? AND seat_number = ?", [examId, hallId, seatNumber], (err, results) => {
     if (err) return res.status(500).json({ message: "DB error", error: err });
     if (results.length > 0) return res.status(400).json({ message: "Seat already occupied" });
 
-    // 2. Check if student is already allocated for this exam
     db.query("SELECT * FROM seating WHERE student_email = ? AND exam_id = ?", [studentEmail, examId], (err, sResults) => {
       if (err) return res.status(500).json({ message: "DB error", error: err });
       if (sResults.length > 0) return res.status(400).json({ message: "Student already has a seat for this exam" });
 
-      // 3. Insert specific allocation
       const sql = "INSERT INTO seating (student_email, hall_id, hall, seat_number, exam_id, exam_name, exam_date) VALUES (?, ?, ?, ?, ?, ?, ?)";
       db.query(sql, [studentEmail, hallId, hallName, seatNumber, examId, examName, examDate], (instErr) => {
         if (instErr) return res.status(500).json({ message: "Failed to allocate manually", error: instErr });
@@ -596,17 +597,12 @@ UI Navigation Guide:
 - Reports: View department-wise analytics.
 - My Seat: (For Students) View allocated exam, hall, and seat number. Download Admit Card from here.
 
-Specific Student Help:
-- "Where is my seat?": Go to the 'My Seat' page.
-- "How to download admit card?": Click the 'Admit Card' button on your seat card in the 'My Seat' page.
-
 Keep responses concise, premium, and helpful. If asked something unrelated to the system, politely redirect.`;
 
 app.post("/chat", verifyToken, async (req, res) => {
   const { message } = req.body;
   if (!message) return res.status(400).json({ message: "Message required" });
 
-  // Fallback rule-based responses if no Gemini key
   if (!genAI) {
     return res.json({ reply: getRuleBasedReply(message, req.user.role) });
   }
@@ -642,7 +638,7 @@ function getRuleBasedReply(message, role) {
 }
 
 // ─────────────────────────────────────────────
-// INITIALIZE DATABASE (Run this first!)
+// INITIALIZE DATABASE
 // ─────────────────────────────────────────────
 app.get("/init-db", (req, res) => {
   const fs = require("fs");
@@ -654,11 +650,7 @@ app.get("/init-db", (req, res) => {
   }
 
   const sql = fs.readFileSync(sqlFile, "utf8");
-
-  const statements = sql
-    .split(";")
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
+  const statements = sql.split(";").map(s => s.trim()).filter(s => s.length > 0);
 
   let completed = 0;
   let errors = [];
@@ -666,10 +658,7 @@ app.get("/init-db", (req, res) => {
   const runNext = (index) => {
     if (index >= statements.length) {
       if (errors.length > 0) {
-        return res.status(500).json({
-          message: "Database initialization completed with errors",
-          errors
-        });
+        return res.status(500).json({ message: "Database initialization completed with errors", errors });
       }
       return res.json({ message: "Database initialized successfully! ✅" });
     }
@@ -687,8 +676,7 @@ app.get("/init-db", (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// SEED ADMIN — ✅ UPDATED PASSWORDS
-// Visit: http://localhost:5001/seed-admin
+// SEED ADMIN
 // ─────────────────────────────────────────────
 app.get("/seed-admin", async (req, res) => {
   try {
@@ -709,21 +697,18 @@ app.get("/seed-admin", async (req, res) => {
       [adminHash, facultyHash, f2Hash, f3Hash, f4Hash],
       (err) => {
         if (err) return res.status(500).json({ message: "DB error users", error: err });
-        
-        // Aggressively seed default halls and exams
+
         const seedHalls = [
           { name: 'Main Hall A', cap: 60, r: 6, c: 10 },
           { name: 'Examination Center - B', cap: 100, r: 10, c: 10 },
           { name: 'Computer Lab 3', cap: 40, r: 4, c: 10 }
         ];
 
-        // Seed Halls first
         const hallPromises = seedHalls.map(h => new Promise((resolve) => {
           db.query("INSERT IGNORE INTO halls (name, capacity, `rows`, `cols`) VALUES (?, ?, ?, ?)", [h.name, h.cap, h.r, h.c], resolve);
         }));
 
         Promise.all(hallPromises).then(() => {
-          // Now seed Exams
           const examSeeds = [
             ['Semester Final: Computer Networks', 'Computer Science', 'CURDATE()', '10:00 AM', 1],
             ['Mid-Term: Data Structures', 'Computer Science', 'DATE_ADD(CURDATE(), INTERVAL 2 DAY)', '09:00 AM', 1],
@@ -741,7 +726,6 @@ app.get("/seed-admin", async (req, res) => {
             db.query(`INSERT IGNORE INTO exams (name, subject, \`date\`, \`time\`, hall_id) VALUES (?, ?, ${ex[2]}, ?, ?)`, [ex[0], ex[1], ex[3], ex[4]], resolve);
           }));
 
-          // Seed 20+ Students with different departments
           const studentSeeds = [
             ['Alice', 'Johnson', 'alice@edu.com', 'CS101', 'Computer Science'],
             ['Bob', 'Smith', 'bob@edu.com', 'CS102', 'Computer Science'],
@@ -768,13 +752,12 @@ app.get("/seed-admin", async (req, res) => {
           const studentPromises = studentSeeds.map(async s => {
             const hash = await bcrypt.hash("student123", 10);
             return new Promise((resolve) => {
-              db.query("INSERT IGNORE INTO users (first_name, last_name, email, password, role, roll_number, department) VALUES (?, ?, ?, ?, 'student', ?, ?)", 
-              [s[0], s[1], s[2], hash, s[3], s[4]], resolve);
+              db.query("INSERT IGNORE INTO users (first_name, last_name, email, password, role, roll_number, department) VALUES (?, ?, ?, ?, 'student', ?, ?)",
+                [s[0], s[1], s[2], hash, s[3], s[4]], resolve);
             });
           });
 
           Promise.all([...examPromises, ...studentPromises]).then(() => {
-            // Auto-assign default faculty to exams
             db.query(`
               INSERT IGNORE INTO invigilators (faculty_id, exam_id, hall_id)
               SELECT f.id, e.id, e.hall_id
@@ -789,13 +772,10 @@ app.get("/seed-admin", async (req, res) => {
             `, (seedErr) => {
               if (seedErr) console.error('Invigilation seed error:', seedErr.message);
               res.json({
-                message: "System enriched: 10 Exams, 20+ Students, 4 Faculty with assignments ✅",
+                message: "System fully enriched with 10 Exams and 20+ Students ✅",
                 users: [
-                  { email: "admin@examseat.com", password: "Admin@2024!", role: "admin" },
-                  { email: "faculty@examseat.com", password: "Faculty@2024!", role: "faculty", name: "Dr. Arjun Sharma" },
-                  { email: "meena.patel@examseat.com", password: "Faculty@2024!", role: "faculty", name: "Prof. Meena Patel" },
-                  { email: "ravi.rao@examseat.com", password: "Faculty@2024!", role: "faculty", name: "Dr. Ravi Rao" },
-                  { email: "lakshmi.nair@examseat.com", password: "Faculty@2024!", role: "faculty", name: "Prof. Lakshmi Nair" },
+                  { email: "admin@examseat.com", password: "Admin@2024!" },
+                  { email: "faculty@examseat.com", password: "Faculty@2024!" }
                 ],
                 info: "Students can login with password: student123"
               });
