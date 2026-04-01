@@ -5,41 +5,42 @@
 }
 
 .manage-form {
-    background: #ffffff;
+    background: var(--bg-card);
     padding: 30px;
     border-radius: 12px;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     margin-bottom: 30px;
 }
 
 .manage-form input, .manage-form select {
-    background: #ffffff;
-    border: 1px solid #d1d5db;
-    color: #111827;
+    background: #0f172a;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
 }
 
 .manage-form button {
-    background: #4f46e5;
+    background: var(--primary);
     color: white;
     font-weight: 600;
 }
 
 .manage-card {
-    background: #ffffff;
+    background: var(--bg-card);
     padding: 20px;
     border-radius: 10px;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     transition: background 0.2s;
 }
 
 .manage-card:hover {
-    background: #f9fafb;
+    background: rgba(255,255,255,0.02);
+    border-color: var(--primary);
 }
 
-.manage-card strong { color: #111827; font-size: 1.1rem; }
-.manage-card p { color: #6b7280; font-size: 0.95rem; }
+.manage-card strong { color: var(--text-main); font-size: 1.1rem; }
+.manage-card p { color: var(--text-muted); font-size: 0.95rem; }
 
 .del-btn {
     background: rgba(239, 68, 68, 0.1);

@@ -7,7 +7,10 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const db = require("./db");
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
+  credentials: true
+}));
 app.use(express.json());
 
 const SECRET = process.env.JWT_SECRET || "examSeat_super_secret_key_2024";
@@ -376,10 +379,38 @@ app.patch("/seating/:id/attendance", verifyToken, requireAdminOrFaculty, (req, r
 
 // Get all faculty for assignment
 app.get("/faculty", verifyToken, requireAdminOrFaculty, (req, res) => {
-  db.query("SELECT id, first_name, last_name, email, department FROM users WHERE role = 'faculty'", (err, results) => {
+  db.query("SELECT id, first_name, last_name, email, department FROM users WHERE role = 'faculty' ORDER BY first_name ASC", (err, results) => {
     if (err) return res.status(500).json({ message: "DB error", error: err });
     res.json(results);
   });
+});
+
+// Seed default faculty (safe - uses INSERT IGNORE)
+app.get("/seed-faculty", async (req, res) => {
+  try {
+    const hash = await bcrypt.hash("Faculty@2024!", 10);
+    const faculty = [
+      ['Dr. Arjun', 'Sharma', 'faculty@examseat.com', 'Computer Science'],
+      ['Prof. Meena', 'Patel', 'meena.patel@examseat.com', 'Information Technology'],
+      ['Dr. Ravi', 'Rao', 'ravi.rao@examseat.com', 'Software Engineering'],
+      ['Prof. Lakshmi', 'Nair', 'lakshmi.nair@examseat.com', 'AI & Data Science'],
+    ];
+    const values = faculty.map(f => [f[0], f[1], f[2], hash, 'faculty', f[3]]);
+    db.query(
+      `INSERT INTO users (first_name, last_name, email, password, role, department) VALUES ?
+       ON DUPLICATE KEY UPDATE role='faculty', first_name=VALUES(first_name), last_name=VALUES(last_name)`,
+      [values],
+      (err) => {
+        if (err) return res.status(500).json({ message: "DB error", error: err });
+        res.json({
+          message: "4 default faculty seeded ✅",
+          accounts: faculty.map(f => ({ name: `${f[0]} ${f[1]}`, email: f[2], password: 'Faculty@2024!', dept: f[3] }))
+        });
+      }
+    );
+  } catch (err) {
+    res.status(500).json({ message: "Seed failed" });
+  }
 });
 
 // Assign Invigilator
@@ -398,16 +429,28 @@ app.post("/invigilation", verifyToken, requireAdminOrFaculty, (req, res) => {
 // Get assignments
 app.get("/invigilation", verifyToken, (req, res) => {
   db.query(
-    `SELECT i.*, f.first_name, f.last_name, e.name as exam_name, h.name as hall_name 
+    `SELECT i.*, f.first_name, f.last_name, f.email as faculty_email, f.department as faculty_dept,
+     e.name as exam_name, e.date as exam_date, e.time as exam_time,
+     h.name as hall_name 
      FROM invigilators i
      JOIN users f ON i.faculty_id = f.id
      JOIN exams e ON i.exam_id = e.id
-     JOIN halls h ON i.hall_id = h.id`,
+     JOIN halls h ON i.hall_id = h.id
+     ORDER BY e.date ASC`,
     (err, results) => {
       if (err) return res.status(500).json({ message: "DB error", error: err });
       res.json(results);
     }
   );
+});
+
+// Delete/unassign an invigilator
+app.delete("/invigilation/:id", verifyToken, requireAdmin, (req, res) => {
+  db.query("DELETE FROM invigilators WHERE id = ?", [req.params.id], (err, result) => {
+    if (err) return res.status(500).json({ message: "DB error", error: err });
+    if (result.affectedRows === 0) return res.status(404).json({ message: "Assignment not found" });
+    res.json({ message: "Assignment removed successfully" });
+  });
 });
 
 // Mock Notifications
@@ -649,15 +692,21 @@ app.get("/init-db", (req, res) => {
 // ─────────────────────────────────────────────
 app.get("/seed-admin", async (req, res) => {
   try {
-    const adminHash = await bcrypt.hash("Admin@2024!", 10);       // ✅ UPDATED
-    const facultyHash = await bcrypt.hash("Faculty@2024!", 10);   // ✅ UPDATED
+    const adminHash = await bcrypt.hash("Admin@2024!", 10);
+    const facultyHash = await bcrypt.hash("Faculty@2024!", 10);
+    const f2Hash = await bcrypt.hash("Faculty@2024!", 10);
+    const f3Hash = await bcrypt.hash("Faculty@2024!", 10);
+    const f4Hash = await bcrypt.hash("Faculty@2024!", 10);
 
     db.query(
       `INSERT INTO users (first_name, last_name, email, password, role, department) VALUES
        ('Admin', 'User', 'admin@examseat.com', ?, 'admin', 'Administration'),
-       ('Faculty', 'Demo', 'faculty@examseat.com', ?, 'faculty', 'Computer Science')
+       ('Dr. Arjun', 'Sharma', 'faculty@examseat.com', ?, 'faculty', 'Computer Science'),
+       ('Prof. Meena', 'Patel', 'meena.patel@examseat.com', ?, 'faculty', 'Information Technology'),
+       ('Dr. Ravi', 'Rao', 'ravi.rao@examseat.com', ?, 'faculty', 'Software Engineering'),
+       ('Prof. Lakshmi', 'Nair', 'lakshmi.nair@examseat.com', ?, 'faculty', 'AI & Data Science')
        ON DUPLICATE KEY UPDATE password = VALUES(password), role = VALUES(role)`,
-      [adminHash, facultyHash],
+      [adminHash, facultyHash, f2Hash, f3Hash, f4Hash],
       (err) => {
         if (err) return res.status(500).json({ message: "DB error users", error: err });
         
@@ -725,13 +774,31 @@ app.get("/seed-admin", async (req, res) => {
           });
 
           Promise.all([...examPromises, ...studentPromises]).then(() => {
-            res.json({
-              message: "System fully enriched with 10 Exams and 20+ Students ✅",
-              users: [
-                { email: "admin@examseat.com", password: "Admin@2024!" },
-                { email: "faculty@examseat.com", password: "Faculty@2024!" },
-              ],
-              info: "Students can login with password: student123"
+            // Auto-assign default faculty to exams
+            db.query(`
+              INSERT IGNORE INTO invigilators (faculty_id, exam_id, hall_id)
+              SELECT f.id, e.id, e.hall_id
+              FROM users f
+              JOIN exams e ON (
+                (f.email = 'faculty@examseat.com' AND e.id IN (SELECT id FROM exams ORDER BY id LIMIT 3)) OR
+                (f.email = 'meena.patel@examseat.com' AND e.id IN (SELECT id FROM exams ORDER BY id LIMIT 6 OFFSET 3)) OR
+                (f.email = 'ravi.rao@examseat.com' AND e.id IN (SELECT id FROM exams ORDER BY id LIMIT 2 OFFSET 6)) OR
+                (f.email = 'lakshmi.nair@examseat.com' AND e.id IN (SELECT id FROM exams ORDER BY id LIMIT 2 OFFSET 8))
+              )
+              WHERE f.role = 'faculty' AND e.hall_id IS NOT NULL
+            `, (seedErr) => {
+              if (seedErr) console.error('Invigilation seed error:', seedErr.message);
+              res.json({
+                message: "System enriched: 10 Exams, 20+ Students, 4 Faculty with assignments ✅",
+                users: [
+                  { email: "admin@examseat.com", password: "Admin@2024!", role: "admin" },
+                  { email: "faculty@examseat.com", password: "Faculty@2024!", role: "faculty", name: "Dr. Arjun Sharma" },
+                  { email: "meena.patel@examseat.com", password: "Faculty@2024!", role: "faculty", name: "Prof. Meena Patel" },
+                  { email: "ravi.rao@examseat.com", password: "Faculty@2024!", role: "faculty", name: "Dr. Ravi Rao" },
+                  { email: "lakshmi.nair@examseat.com", password: "Faculty@2024!", role: "faculty", name: "Prof. Lakshmi Nair" },
+                ],
+                info: "Students can login with password: student123"
+              });
             });
           });
         });

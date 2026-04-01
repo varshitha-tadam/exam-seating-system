@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_URL from '../api';
 import './Dashboard.css';
 
 const StudentDashboard = () => {
@@ -10,7 +11,7 @@ const StudentDashboard = () => {
         const fetchMySeat = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const res = await axios.get('http://localhost:5001/my-seat', {
+                const res = await axios.get(`${API_URL}/my-seat`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setMySeat(res.data);

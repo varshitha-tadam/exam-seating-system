@@ -1,9 +1,9 @@
 :root {
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
   --bg-main: #0f172a;
-  --bg-card: #ffffff;
-  --text-main: #f8fafc; /* Changed to white */
+  --bg-card: #1e293b; /* Dark Cards */
+  --text-main: #f8fafc;
   --text-muted: #94a3b8;
   --border-color: #334155;
 }
@@ -17,10 +17,27 @@
 body {
   margin: 0;
   font-family: 'Inter', -apple-system, sans-serif;
-  background-color: #0f172a; /* Dark Navy from Login */
-  color: var(--text-main);
+  background-color: #0f172a;
+  color: #f8fafc !important; /* FORCE WHITE */
   min-height: 100vh;
   line-height: 1.5;
+}
+
+*, p, span, strong, label, h1, h2, h3, h4, h5, h6 {
+  color: #f8fafc; /* Removed !important to allow overrides */
+}
+
+select, input {
+  color: #1e293b; /* Default dark text for inputs/selects which usually have light backgrounds */
+}
+
+a {
+  color: #6366f1 !important;
+  text-decoration: none;
+}
+
+button:not(.logout-btn):not(.del-btn) {
+  color: #ffffff; /* Removed !important */
 }
 
 #root {

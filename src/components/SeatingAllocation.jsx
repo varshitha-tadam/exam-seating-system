@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_URL from '../api';
 import './Seating.css';
 
 const SeatingAllocation = () => {
@@ -23,9 +24,9 @@ const SeatingAllocation = () => {
                 const token = localStorage.getItem('token');
                 if (!token) throw new Error("No token found. Please login again.");
                 const [exRes, hlRes, stRes] = await Promise.all([
-                    axios.get('http://localhost:5001/exams', { headers: { Authorization: `Bearer ${token}` } }),
-                    axios.get('http://localhost:5001/halls', { headers: { Authorization: `Bearer ${token}` } }),
-                    axios.get('http://localhost:5001/students', { headers: { Authorization: `Bearer ${token}` } })
+                    axios.get(`${API_URL}/exams`, { headers: { Authorization: `Bearer ${token}` } }),
+                    axios.get(`${API_URL}/halls`, { headers: { Authorization: `Bearer ${token}` } }),
+                    axios.get(`${API_URL}/students`, { headers: { Authorization: `Bearer ${token}` } })
                 ]);
                 setExams(exRes.data);
                 setHalls(hlRes.data);
@@ -46,7 +47,7 @@ const SeatingAllocation = () => {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.get(`http://localhost:5001/allocate/${targetExam}`, {
+            const res = await axios.get(`${API_URL}/allocate/${targetExam}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             // ONLY show students allocated to THIS specifically selected hall
@@ -81,7 +82,7 @@ const SeatingAllocation = () => {
             const token = localStorage.getItem('token');
             const exam = exams.find(e => e.id === parseInt(selectedExam));
             const hall = halls.find(h => h.id === parseInt(selectedHall));
-            await axios.post('http://localhost:5001/allocate', {
+            await axios.post(`${API_URL}/allocate`, {
                 examId: selectedExam,
                 hallId: selectedHall,
                 exam_name: exam.name,
@@ -120,7 +121,7 @@ const SeatingAllocation = () => {
             const exam = exams.find(e => e.id === parseInt(selectedExam));
             const hall = halls.find(h => h.id === parseInt(selectedHall));
             
-            await axios.post('http://localhost:5001/allocate-manual', {
+            await axios.post(`${API_URL}/allocate-manual`, {
                 studentEmail,
                 examId: selectedExam,
                 hallId: selectedHall,

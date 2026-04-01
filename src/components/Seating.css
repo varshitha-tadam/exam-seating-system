@@ -7,12 +7,12 @@
 }
 
 .seating-header {
-    background: #ffffff;
-    padding: 20px;
-    border-radius: 12px;
-    border: 1px solid #d1d5db;
+    background: var(--bg-card);
+    padding: 25px;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
     margin-bottom: 25px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
 
 .controls {
@@ -22,12 +22,29 @@
     align-items: center;
 }
 
+.controls select, 
+.controls input, 
+.controls button:not(.mode-toggle):not(.export) {
+    color: #000000 !important;
+    background: #ffffff !important;
+}
+
+.controls select option {
+    color: #000000 !important;
+    background: #ffffff !important;
+}
+
+.controls .mode-toggle, 
+.controls .export {
+    color: #ffffff !important;
+}
+
 .visual-grid {
-    background: #ffffff;
+    background: rgba(0,0,0,0.2);
     padding: 40px;
-    border-radius: 15px;
-    border: 1px solid #d1d5db;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
     margin: 0 auto;
 }
 
@@ -40,7 +57,7 @@
 .seat {
     width: 60px;
     height: 60px;
-    border-radius: 8px; /* Rectangular as per Pic 2 */
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -52,20 +69,21 @@
 }
 
 .seat.empty {
-    background: #ffffff;
-    border: 1px solid #d1d5db;
-    color: #9ca3af;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border-color);
+    color: rgba(255,255,255,0.1);
 }
 
 .seat.occupied {
-    background: #eef2ff; /* Very light blue */
-    border: 2px solid #4f46e5; /* Nice blue border as per Pic 2 */
-    color: #4f46e5; /* Blue text */
+    background: var(--primary);
+    border: 2px solid #818cf8;
+    color: white;
 }
 
 .seat:hover {
     transform: scale(1.05);
-    background: #e0e7ff;
+    z-index: 10;
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
 }
 
 .seat-pop {
@@ -128,13 +146,21 @@
 }
 
 .modal-content {
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.98);
     padding: 30px;
     border-radius: 20px;
     width: 500px;
     max-height: 80vh;
     display: flex;
     flex-direction: column;
+    color: #1e293b; /* Dark text for light modal */
+}
+
+.modal-content h3, 
+.modal-content strong, 
+.modal-content p,
+.modal-content span {
+    color: #1e293b !important;
 }
 
 .student-list-picker {
@@ -151,10 +177,11 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px;
-    background: #f8fafc;
+    background: #f1f5f9;
     border-radius: 10px;
     cursor: pointer;
     transition: background 0.2s;
+    color: #1e293b; /* Dark text for student options */
 }
 
 .student-option:hover {

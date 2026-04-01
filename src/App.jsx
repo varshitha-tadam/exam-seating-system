@@ -38,7 +38,7 @@ function App() {
       <div className="app-container">
         {user && (
           <nav className="nav">
-            <div className="nav-brand">ExamSeat AI</div>
+            <div className="nav-brand">Exam Seat Allocation</div>
             <div className="nav-links">
               <Link to="/">Dashboard</Link>
               {(user.role.toLowerCase() === 'admin' || user.role.toLowerCase() === 'faculty') && (

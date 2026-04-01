@@ -88,7 +88,13 @@ async function reset() {
         const studentPass = await bcrypt.hash("student123", 10);
 
         await runSQL("INSERT INTO users (first_name, last_name, email, password, role) VALUES ('Varshitha', 'Admin', 'admin@examseat.com', ?, 'admin')", [adminPass]);
-        await runSQL("INSERT INTO users (first_name, last_name, email, password, role) VALUES ('Professor', 'Smith', 'faculty@examseat.com', ?, 'faculty')", [facultyPass]);
+        await runSQL("INSERT INTO users (first_name, last_name, email, password, role, department) VALUES ('Professor', 'Smith', 'faculty@examseat.com', ?, 'faculty', 'Computer Science')", [facultyPass]);
+        await runSQL("INSERT INTO users (first_name, last_name, email, password, role, department) VALUES ('Dr.', 'Brown', 'brown@examseat.com', ?, 'faculty', 'Physics')", [facultyPass]);
+        await runSQL("INSERT INTO users (first_name, last_name, email, password, role, department) VALUES ('Prof.', 'Davis', 'davis@examseat.com', ?, 'faculty', 'Chemistry')", [facultyPass]);
+        await runSQL("INSERT INTO users (first_name, last_name, email, password, role, department) VALUES ('Dr.', 'Wilson', 'wilson@examseat.com', ?, 'faculty', 'Biology')", [facultyPass]);
+        await runSQL("INSERT INTO users (first_name, last_name, email, password, role, department) VALUES ('Prof.', 'Moore', 'moore@examseat.com', ?, 'faculty', 'English')", [facultyPass]);
+        await runSQL("INSERT INTO users (first_name, last_name, email, password, role, department) VALUES ('Dr.', 'Taylor', 'taylor@examseat.com', ?, 'faculty', 'Mathematics')", [facultyPass]);
+        await runSQL("INSERT INTO users (first_name, last_name, email, password, role, department) VALUES ('Prof.', 'Anderson', 'anderson@examseat.com', ?, 'faculty', 'History')", [facultyPass]);
 
         const students = [
             ['Alice', 'Johnson'], ['Bob', 'Anderson'], ['Charlie', 'Davis'], ['Diana', 'Evans'], ['Ethan', 'Foster'],

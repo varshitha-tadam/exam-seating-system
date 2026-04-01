@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_URL from '../api';
 import './Management.css';
 
 const Students = () => {
@@ -9,7 +10,7 @@ const Students = () => {
 
     const fetchStudents = async () => {
         const token = localStorage.getItem('token');
-        const res = await axios.get('http://localhost:5001/students', { headers: { Authorization: `Bearer ${token}` } });
+        const res = await axios.get(`${API_URL}/students`, { headers: { Authorization: `Bearer ${token}` } });
         setStudents(res.data);
     };
 
@@ -20,7 +21,7 @@ const Students = () => {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
-            await axios.post('http://localhost:5001/students', formData, { headers: { Authorization: `Bearer ${token}` } });
+            await axios.post(`${API_URL}/students`, formData, { headers: { Authorization: `Bearer ${token}` } });
             setFormData({ name: '', email: '', rollNumber: '', department: '' });
             fetchStudents();
         } catch (err) { alert(err.response?.data?.message || "Error adding student"); }
@@ -30,7 +31,7 @@ const Students = () => {
     const handleDelete = async (id) => {
         if (!window.confirm("Delete this student?")) return;
         const token = localStorage.getItem('token');
-        await axios.delete(`http://localhost:5001/students/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+        await axios.delete(`${API_URL}/students/${id}`, { headers: { Authorization: `Bearer ${token}` } });
         fetchStudents();
     };
 

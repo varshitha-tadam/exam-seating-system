@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_URL from '../api';
 import './Management.css';
 
 const Halls = () => {
@@ -9,7 +10,7 @@ const Halls = () => {
 
     const fetchHalls = async () => {
         const token = localStorage.getItem('token');
-        const res = await axios.get('http://localhost:5001/halls', { headers: { Authorization: `Bearer ${token}` } });
+        const res = await axios.get(`${API_URL}/halls`, { headers: { Authorization: `Bearer ${token}` } });
         setHalls(res.data);
     };
 
@@ -20,7 +21,7 @@ const Halls = () => {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
-            await axios.post('http://localhost:5001/halls', formData, { headers: { Authorization: `Bearer ${token}` } });
+            await axios.post(`${API_URL}/halls`, formData, { headers: { Authorization: `Bearer ${token}` } });
             setFormData({ name: '', capacity: '', rows: '', cols: '' });
             fetchHalls();
         } catch (err) { alert("Error adding hall"); }
@@ -30,7 +31,7 @@ const Halls = () => {
     const handleDelete = async (id) => {
         if (!window.confirm("Delete this hall?")) return;
         const token = localStorage.getItem('token');
-        await axios.delete(`http://localhost:5001/halls/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+        await axios.delete(`${API_URL}/halls/${id}`, { headers: { Authorization: `Bearer ${token}` } });
         fetchHalls();
     };
 

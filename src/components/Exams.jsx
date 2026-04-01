@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_URL from '../api';
 import './Management.css';
 
 const Exams = () => {
@@ -11,8 +12,8 @@ const Exams = () => {
     const fetchData = async () => {
         const token = localStorage.getItem('token');
         const [exRes, hlRes] = await Promise.all([
-            axios.get('http://localhost:5001/exams', { headers: { Authorization: `Bearer ${token}` } }),
-            axios.get('http://localhost:5001/halls', { headers: { Authorization: `Bearer ${token}` } })
+            axios.get(`${API_URL}/exams`, { headers: { Authorization: `Bearer ${token}` } }),
+            axios.get(`${API_URL}/halls`, { headers: { Authorization: `Bearer ${token}` } })
         ]);
         setExams(exRes.data);
         setHalls(hlRes.data);
@@ -25,7 +26,7 @@ const Exams = () => {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
-            await axios.post('http://localhost:5001/exams', formData, { headers: { Authorization: `Bearer ${token}` } });
+            await axios.post(`${API_URL}/exams`, formData, { headers: { Authorization: `Bearer ${token}` } });
             setFormData({ name: '', subject: '', date: '', time: '', hall_id: '' });
             fetchData();
         } catch (err) { alert("Error scheduling exam"); }
@@ -35,7 +36,7 @@ const Exams = () => {
     const handleDelete = async (id) => {
         if (!window.confirm("Delete this exam?")) return;
         const token = localStorage.getItem('token');
-        await axios.delete(`http://localhost:5001/exams/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+        await axios.delete(`${API_URL}/exams/${id}`, { headers: { Authorization: `Bearer ${token}` } });
         fetchData();
     };
 

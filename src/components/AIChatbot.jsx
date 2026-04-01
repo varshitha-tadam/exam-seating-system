@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import API_URL from '../api';
 import './AIChatbot.css';
 
 const AIChatbot = () => {
@@ -30,7 +31,7 @@ const AIChatbot = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.post('http://localhost:5001/chat', { message }, {
+            const res = await axios.post(`${API_URL}/chat`, { message }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setChat(prev => [...prev, { role: 'bot', text: res.data.reply }]);
