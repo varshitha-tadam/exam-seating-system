@@ -650,29 +650,19 @@ app.get("/init-db", (req, res) => {
   }
 
   const sql = fs.readFileSync(sqlFile, "utf8");
-  const statements = sql.split(";").map(s => s.trim()).filter(s => s.length > 0);
-
-  let completed = 0;
-  let errors = [];
-
-  const runNext = (index) => {
-    if (index >= statements.length) {
-      if (errors.length > 0) {
-        return res.status(500).json({ message: "Database initialization completed with errors", errors });
-      }
-      return res.json({ message: "Database initialized successfully! ✅" });
+  
+  // Execute the entire .sql file at once utilizing multipleStatements: true
+  db.query(sql, (err) => {
+    if (err) {
+      console.error("SQL Error in init-db:", err.message);
+      return res.status(500).json({ 
+        message: "Database initialization failed", 
+        error: err.message,
+        details: "Ensure your Aiven database credentials are correct in Render Environment Variables."
+      });
     }
-
-    db.query(statements[index], (err) => {
-      if (err) {
-        console.error("SQL Error in init-db:", err.message);
-        errors.push({ statement: statements[index].substring(0, 50) + "...", error: err.message });
-      }
-      runNext(index + 1);
-    });
-  };
-
-  runNext(0);
+    return res.json({ message: "Database initialized successfully! ✅" });
+  });
 });
 
 // ─────────────────────────────────────────────
